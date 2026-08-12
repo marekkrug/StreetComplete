@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -17,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import de.westnordost.streetcomplete.osm.duration.DurationUnit
 import de.westnordost.streetcomplete.osm.duration.DurationUnitDropdown
 import de.westnordost.streetcomplete.ui.common.input.DecimalInput
+import de.westnordost.streetcomplete.util.locale.CurrencyAmount
 import de.westnordost.streetcomplete.util.locale.CurrencyFormatElements
 
 /**
@@ -24,8 +24,8 @@ import de.westnordost.streetcomplete.util.locale.CurrencyFormatElements
  */
 @Composable
 fun ChargeInput(
-    amount: Double,
-    onAmountChange: (Double?) -> Unit,
+    amount: CurrencyAmount?,
+    onAmountChange: (CurrencyAmount?) -> Unit,
     currencyFormatInfo: CurrencyFormatElements,
     durationUnit: DurationUnit,
     onDurationUnitChange: (DurationUnit) -> Unit,
@@ -46,18 +46,30 @@ fun ChargeInput(
             )
         }
 
-        DecimalInput(
-            value = amount,
-            onValueChange = onAmountChange,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = if (currencyFormatInfo.decimalDigits > 0) {
-                    KeyboardType.Decimal
-                } else {
-                    KeyboardType.Number
-                }
-            ),
-            modifier = Modifier.width(150.dp),
-        )
+        val amountAsDouble = amount?.toDouble(currencyFormatInfo.decimalDigits)
+        AutoFitTextFieldFontSize(
+            value = amountAsDouble?.toString().orEmpty(),
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            DecimalInput(
+                value = amountAsDouble,
+                onValueChange = { newValue ->
+                    onAmountChange(newValue?.let {
+                        CurrencyAmount.fromDouble(it, currencyFormatInfo.decimalDigits)
+                    })
+                },
+                maxFractionDigits = currencyFormatInfo.decimalDigits,
+                isUnsigned = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (currencyFormatInfo.decimalDigits > 0) {
+                        KeyboardType.Decimal
+                    } else {
+                        KeyboardType.Number
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         if (!currencyFormatInfo.isSymbolBeforeAmount) {
             Text(
@@ -67,12 +79,10 @@ fun ChargeInput(
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
-
         Text(
             text = perLabel,
             style = MaterialTheme.typography.body1
         )
-
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
